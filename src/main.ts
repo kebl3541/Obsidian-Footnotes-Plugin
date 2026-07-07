@@ -58,18 +58,27 @@ export default class FootnoteEditorPlugin extends Plugin {
 
     // Click a footnote number anywhere (Live Preview or Reading view) to edit it
     // in place. Capture phase so we can stop the default jump-to-definition.
-    this.registerDomEvent(
-      document,
-      "click",
-      (evt) => this.handleFootnoteClick(evt),
-      { capture: true }
+    // Registered per-window so popout windows work too.
+    const registerClickHandler = (doc: Document) =>
+      this.registerDomEvent(
+        doc,
+        "click",
+        (evt) => this.handleFootnoteClick(evt),
+        { capture: true }
+      );
+    registerClickHandler(activeDocument);
+    this.registerEvent(
+      this.app.workspace.on("window-open", (win) =>
+        registerClickHandler(win.doc)
+      )
     );
 
     this.addSettingTab(new FootnoteEditorSettingTab(this.app, this));
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const saved = (await this.loadData()) as Partial<FootnoteEditorSettings> | null;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
   }
 
   async saveSettings() {
@@ -155,14 +164,20 @@ export default class FootnoteEditorPlugin extends Plugin {
 
     // Live Preview: map the clicked element to a source position and read the
     // exact label from the underlying text (works for named footnotes too).
-    const cm = (editor as unknown as { cm?: any }).cm;
+    // `cm` is the underlying CodeMirror 6 EditorView; not in Obsidian's public
+    // typings, so we describe just the surface we use.
+    interface EditorViewLike {
+      contentDOM: HTMLElement;
+      posAtDOM(node: Node): number;
+    }
+    const cm = (editor as unknown as { cm?: EditorViewLike }).cm;
     try {
-      if (cm?.contentDOM?.contains(refEl)) {
+      if (cm && cm.contentDOM.contains(refEl)) {
         const pos = cm.posAtDOM(refEl);
         const p = editor.offsetToPos(pos);
         label = nearestReference(editor.getLine(p.line), p.ch)?.label ?? null;
       }
-    } catch (_) {
+    } catch {
       // fall through to index-based resolution
     }
 
