@@ -1,7 +1,9 @@
 # Footnote Inline Editor
 
+[![Downloads](https://img.shields.io/github/downloads/kebl3541/Obsidian-Footnotes-Plugin/total?style=flat&logo=github&label=Downloads&color=success)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/releases)
 [![GitHub stars](https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=flat&logo=github&label=Stars)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/stargazers)
 [![Latest release](https://img.shields.io/github/v/release/kebl3541/Obsidian-Footnotes-Plugin?style=flat&label=Release)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/releases/latest)
+
 
 An Obsidian plugin to **add footnotes and edit their text in a popup** — without
 scrolling to the bottom of your note to find the definition.
@@ -85,8 +87,11 @@ into your vault's plugins directory.
 
 ## Support
 
-If this plugin saves you some scrolling, you can
-[buy me a coffee](https://buymeacoffee.com/philosophizer). ☕
+If this plugin is useful to you, you can support its development:
+
+<a href="https://buymeacoffee.com/philosophizer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-orange.png" alt="Buy me a coffee" height="42"></a>
+<a href="https://www.paypal.com/donate/?business=berlin.philosophy%40gmail.com&no_recurring=0&currency_code=EUR"><img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" height="42"></a>
+
 
 ## License
 

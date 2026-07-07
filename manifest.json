@@ -1,11 +1,14 @@
 {
   "id": "footnote-inline-editor",
   "name": "Footnote Inline Editor",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "minAppVersion": "1.4.0",
   "description": "Insert footnotes and edit their text in a popup, without scrolling to the bottom of the note.",
   "author": "kebl3541",
   "authorUrl": "https://github.com/kebl3541",
-  "fundingUrl": "https://buymeacoffee.com/philosophizer",
+  "fundingUrl": {
+    "Buy Me a Coffee": "https://buymeacoffee.com/philosophizer",
+    "PayPal": "https://www.paypal.com/donate/?business=berlin.philosophy%40gmail.com&no_recurring=0&currency_code=EUR"
+  },
   "isDesktopOnly": false
 }
