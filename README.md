@@ -78,7 +78,7 @@ into your vault's plugins directory.
 ## Support
 
 If this plugin saves you some scrolling, you can
-[buy me a coffee](https://buymeacoffee.com/YOUR_USERNAME). ☕
+[buy me a coffee](https://buymeacoffee.com/philosophizer). ☕
 
 ## License
 
