@@ -1,0 +1,22 @@
+.footnote-inline-editor-textarea {
+  width: 100%;
+  min-height: 8em;
+  resize: vertical;
+  font-family: var(--font-text);
+  font-size: var(--font-ui-medium);
+  padding: 0.5em;
+  box-sizing: border-box;
+}
+
+.footnote-inline-editor-input {
+  width: 100%;
+  padding: 0.5em;
+  box-sizing: border-box;
+}
+
+.footnote-inline-editor-buttons {
+  display: flex;
+  gap: 0.5em;
+  justify-content: flex-end;
+  margin-top: 1em;
+}
