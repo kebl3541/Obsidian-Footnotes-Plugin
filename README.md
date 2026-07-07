@@ -1,7 +1,15 @@
 # Footnote Inline Editor
 
+[![GitHub stars](https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=flat&logo=github&label=Stars)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/stargazers)
+[![Latest release](https://img.shields.io/github/v/release/kebl3541/Obsidian-Footnotes-Plugin?style=flat&label=Release)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/releases/latest)
+
 An Obsidian plugin to **add footnotes and edit their text in a popup** — without
 scrolling to the bottom of your note to find the definition.
+
+If you enjoy using this plugin, don't forget to ⭐ star the repository to show
+your support!
+
+<a href="https://buymeacoffee.com/philosophizer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-orange.png" alt="Buy me a coffee" height="42"></a>
 
 ## What it does
 
