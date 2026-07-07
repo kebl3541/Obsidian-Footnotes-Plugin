@@ -1,6 +1,6 @@
 {
   "name": "footnote-inline-editor",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "Insert and edit Obsidian footnotes inline via a popup.",
   "main": "main.js",
   "scripts": {
