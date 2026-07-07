@@ -13,26 +13,26 @@ continued development, please use the buttons below:</p>
 <a href="https://buymeacoffee.com/philosophizer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="52"></a>
 </p>
 
-<p align="center">…and if this plugin makes your day a little easier, please give it a ⭐ on <a href="https://github.com/kebl3541/Obsidian-Footnotes-Plugin">GitHub</a> — it helps others find it!</p>
+<p align="center">…and if this plugin makes your day a little easier, please give it a ⭐ on <a href="https://github.com/kebl3541/Obsidian-Footnotes-Plugin">GitHub</a>, it helps others find it!</p>
 
 
 
-An Obsidian plugin to **add footnotes and edit their text in a popup** — without
+An Obsidian plugin to **add footnotes and edit their text in a popup**, without
 scrolling to the bottom of your note to find the definition.
 
 ## What it does
 
-- **Click to edit** — click any footnote number in your text (Live Preview or
+- **Click to edit**: click any footnote number in your text (Live Preview or
   Reading view) and the edit popup opens pre-filled with the note's text. Save
   and it's written back in place; you never leave the spot you were reading.
-- **Insert footnote at cursor** — drops an auto-numbered `[^1]` where you're
+- **Insert footnote at cursor**: drops an auto-numbered `[^1]` where you're
   typing, creates the matching `[^1]: …` definition at the end of the note, and
   immediately opens a small popup so you can write the note text. Your cursor
   never leaves the spot you were writing.
-- **Edit footnote at cursor** — keyboard alternative to clicking: put your
+- **Edit footnote at cursor**: keyboard alternative to clicking: put your
   cursor on any footnote marker (either the `[^1]` in the body *or* its
   definition at the bottom) and run the command.
-- **Delete** — the popup's Delete button removes the definition and every
+- **Delete**: the popup's Delete button removes the definition and every
   reference to that footnote in one undoable step.
 
 Multi-line footnotes are supported (they're stored with the 4-space indentation
@@ -40,7 +40,7 @@ Obsidian expects for continuation lines).
 
 ## Usage
 
-Both actions are Obsidian commands — run them from the Command Palette
+Both actions are Obsidian commands. Run them from the Command Palette
 (`Cmd/Ctrl+P`) or bind a hotkey under **Settings → Hotkeys**:
 
 - `Footnote Inline Editor: Insert footnote at cursor`
@@ -52,9 +52,9 @@ In the popup, **Cmd/Ctrl+Enter** saves and **Esc** cancels.
 
 ### Settings
 
-- **Auto-number footnotes** (on by default) — new footnotes are numbered
+- **Auto-number footnotes** (on by default): new footnotes are numbered
   `1, 2, 3, …`. Turn it off to be prompted for a custom label each time.
-- **Click footnote number to edit** (on by default) — clicking a marker opens
+- **Click footnote number to edit** (on by default): clicking a marker opens
   the edit popup instead of previewing or jumping to the definition.
 
 ## Install into your vault (manual)
@@ -77,9 +77,9 @@ into your vault's plugins directory.
 
 ## Layout
 
-- `src/footnotes.ts` — pure functions that locate and rewrite footnote
+- `src/footnotes.ts`: pure functions that locate and rewrite footnote
   references and definitions.
-- `src/main.ts` — the plugin, the edit popup, click handling, and the settings
+- `src/main.ts`: the plugin, the edit popup, click handling, and the settings
   tab.
 
 ## Publishing to the community plugin store
@@ -90,7 +90,7 @@ into your vault's plugins directory.
    release assets.
 3. Fork [obsidianmd/obsidian-releases](https://github.com/obsidianmd/obsidian-releases),
    add an entry to `community-plugins.json`, and open a pull request.
-4. Full checklist: [Obsidian docs — Submit your plugin](https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin).
+4. Full checklist: [Obsidian docs: Submit your plugin](https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin).
 
 ## Support
 
