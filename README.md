@@ -4,6 +4,11 @@
 [![GitHub stars](https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=flat&logo=github&label=Stars&cacheSeconds=3600)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/stargazers)
 [![Latest release](https://img.shields.io/github/v/release/kebl3541/Obsidian-Footnotes-Plugin?style=flat&label=Release&cacheSeconds=3600)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/releases/latest)
 
+
+
+An Obsidian plugin to **add footnotes and edit their text in a popup**, without
+scrolling to the bottom of your note to find the definition.
+
 <p align="center">If this plugin adds value for you and you would like to help support
 continued development, please use the buttons below:</p>
 
@@ -17,10 +22,6 @@ continued development, please use the buttons below:</p>
 
 <p align="center">If you like this plugin or find it useful, please consider giving it a <a href="https://github.com/kebl3541/Obsidian-Footnotes-Plugin">star</a> <a href="https://github.com/kebl3541/Obsidian-Footnotes-Plugin"><img src="https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=social" alt="GitHub Repo stars"></a> on GitHub!</p>
 
-
-
-An Obsidian plugin to **add footnotes and edit their text in a popup**, without
-scrolling to the bottom of your note to find the definition.
 
 ## What it does
 
