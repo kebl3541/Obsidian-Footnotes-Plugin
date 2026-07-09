@@ -1,7 +1,7 @@
 # Footnote Inline Editor
 
 [![Downloads](https://img.shields.io/github/downloads/kebl3541/Obsidian-Footnotes-Plugin/total?style=flat&logo=github&label=Downloads&color=success&cacheSeconds=3600)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/releases)
-[![GitHub stars](https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=flat&logo=github&label=Stars&cacheSeconds=7500)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=flat&logo=github&label=Stars&cacheSeconds=7600)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/stargazers)
 [![Latest release](https://img.shields.io/github/v/release/kebl3541/Obsidian-Footnotes-Plugin?style=flat&label=Release&cacheSeconds=3600)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/releases/latest)
 
 
