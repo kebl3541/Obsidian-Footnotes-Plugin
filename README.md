@@ -1,7 +1,7 @@
 # Footnote Inline Editor
 
 [![Downloads](https://img.shields.io/github/downloads/kebl3541/Obsidian-Footnotes-Plugin/total?style=flat&logo=github&label=Downloads&color=success&cacheSeconds=3600)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/releases)
-[![GitHub stars](https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=flat&logo=github&label=Stars&cacheSeconds=7600)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=flat&logo=github&label=Stars&cacheSeconds=300)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/stargazers)
 [![Latest release](https://img.shields.io/github/v/release/kebl3541/Obsidian-Footnotes-Plugin?style=flat&label=Release&cacheSeconds=3600)](https://github.com/kebl3541/Obsidian-Footnotes-Plugin/releases/latest)
 
 
@@ -20,7 +20,7 @@ continued development, please use the buttons below:</p>
 
 <p align="center"><strong><a href="https://buymeacoffee.com/philosophizer">☕ Buy me a coffee</a></strong>&nbsp;&nbsp;·&nbsp;&nbsp;<strong><a href="https://www.paypal.com/donate/?business=berlin.philosophy%40gmail.com&no_recurring=0&currency_code=EUR">💙 Donate via PayPal</a></strong></p>
 
-<p align="center">If you like this plugin or find it useful, please consider giving it a <a href="https://github.com/kebl3541/Obsidian-Footnotes-Plugin">star</a> <a href="https://github.com/kebl3541/Obsidian-Footnotes-Plugin"><img src="https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=social" alt="GitHub Repo stars"></a> on GitHub!</p>
+<p align="center">If you like this plugin or find it useful, please consider giving it a <a href="https://github.com/kebl3541/Obsidian-Footnotes-Plugin">star</a> <a href="https://github.com/kebl3541/Obsidian-Footnotes-Plugin"><img src="https://img.shields.io/github/stars/kebl3541/Obsidian-Footnotes-Plugin?style=social&cacheSeconds=300" alt="GitHub Repo stars"></a> on GitHub!</p>
 
 
 ## What it does
