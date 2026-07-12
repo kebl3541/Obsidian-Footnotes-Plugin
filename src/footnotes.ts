@@ -152,3 +152,255 @@ export function nextNumericLabel(lines: string[]): string {
   while (labels.has(String(n))) n++;
   return String(n);
 }
+
+// ---- Word-like tidying ------------------------------------------------------
+// The goal: footnotes behave like they do in Word. Deleting a definition also
+// removes its in-text markers; deleting the last marker also removes the
+// definition; numeric footnotes are always numbered 1, 2, 3… in reading
+// order; and the definitions block stays sorted to match. Renaming a
+// definition's label moves its markers along instead of orphaning them.
+
+export interface FootnoteSnapshot {
+  refs: Map<string, number>; // label → how many in-text markers
+  defs: Map<string, string>; // label → definition content
+}
+
+export function snapshotFootnotes(lines: string[]): FootnoteSnapshot {
+  const refs = new Map<string, number>();
+  const defs = new Map<string, string>();
+  for (const line of lines) {
+    const d = definitionLabelOnLine(line);
+    if (d && !defs.has(d)) {
+      const def = findDefinition(lines, d);
+      if (def) defs.set(d, def.content);
+    }
+    for (const r of referencesOnLine(line)) {
+      refs.set(r.label, (refs.get(r.label) ?? 0) + 1);
+    }
+  }
+  return { refs, defs };
+}
+
+export interface TidyPlan {
+  removeRefLabels: Set<string>; // definition deleted → markers must go
+  removeDefLabels: Set<string>; // last marker deleted → definition must go
+  renameRefs: Map<string, string>; // definition label edited → markers follow
+}
+
+export function planCleanup(prev: FootnoteSnapshot, cur: FootnoteSnapshot): TidyPlan {
+  const plan: TidyPlan = {
+    removeRefLabels: new Set(),
+    removeDefLabels: new Set(),
+    renameRefs: new Map(),
+  };
+  for (const [label, content] of prev.defs) {
+    if ((prev.refs.get(label) ?? 0) === 0) continue; // was already orphaned; not our doing
+    const defNow = cur.defs.has(label);
+    const refsNow = (cur.refs.get(label) ?? 0) > 0;
+    if (!defNow && refsNow) {
+      // The definition vanished. If an identical definition appeared under a
+      // fresh label with no markers of its own, the user renamed it.
+      let renamed: string | null = null;
+      if (content.trim() !== "") {
+        for (const [l2, c2] of cur.defs) {
+          if (
+            l2 !== label &&
+            !prev.defs.has(l2) &&
+            c2 === content &&
+            (cur.refs.get(l2) ?? 0) === 0
+          ) {
+            renamed = l2;
+            break;
+          }
+        }
+      }
+      if (renamed) plan.renameRefs.set(label, renamed);
+      else plan.removeRefLabels.add(label);
+    } else if (defNow && !refsNow) {
+      plan.removeDefLabels.add(label);
+    }
+  }
+  return plan;
+}
+
+// Rewrite the in-text markers on one line per the plan. Definition heads are
+// untouched here (referencesOnLine already excludes them).
+function rewriteLineRefs(line: string, plan: TidyPlan): string {
+  const refs = referencesOnLine(line);
+  let out = line;
+  for (let i = refs.length - 1; i >= 0; i--) {
+    const r = refs[i];
+    if (plan.removeRefLabels.has(r.label)) {
+      out = out.slice(0, r.from) + out.slice(r.to);
+    } else {
+      const to = plan.renameRefs.get(r.label);
+      if (to) out = out.slice(0, r.from) + `[^${to}]` + out.slice(r.to);
+    }
+  }
+  return out;
+}
+
+export function applyPlan(lines: string[], plan: TidyPlan): string[] {
+  let out = lines.map((l) => rewriteLineRefs(l, plan));
+  for (const label of plan.removeDefLabels) {
+    const def = findDefinition(out, label);
+    if (!def) continue;
+    out.splice(def.startLine, def.endLine - def.startLine + 1);
+    // Collapse a doubled blank left behind by the removal.
+    const at = def.startLine;
+    if (
+      at > 0 &&
+      out[at - 1]?.trim() === "" &&
+      (at >= out.length || out[at]?.trim() === "")
+    ) {
+      out.splice(at - 1, 1);
+    }
+  }
+  // Trim trailing blank lines left by deletions at the end of the note.
+  while (out.length > 1 && out[out.length - 1].trim() === "" ) out.pop();
+  return out;
+}
+
+const NUMERIC_RE = /^[0-9]+$/;
+
+// First-appearance order of every referenced label, body text first.
+function referenceOrder(lines: string[]): string[] {
+  const seen = new Set<string>();
+  const order: string[] = [];
+  for (const line of lines) {
+    for (const r of referencesOnLine(line)) {
+      if (!seen.has(r.label)) {
+        seen.add(r.label);
+        order.push(r.label);
+      }
+    }
+  }
+  return order;
+}
+
+// Renumber numeric footnotes 1, 2, 3… in reading order. Named labels are left
+// alone. Returns the old→new mapping (identity entries omitted).
+export function renumberFootnotes(lines: string[]): {
+  lines: string[];
+  mapping: Map<string, string>;
+} {
+  const snap = snapshotFootnotes(lines);
+  const numbered = referenceOrder(lines).filter(
+    (l) => NUMERIC_RE.test(l) && snap.defs.has(l)
+  );
+  const mapping = new Map<string, string>();
+  numbered.forEach((label, i) => {
+    const next = String(i + 1);
+    if (label !== next) mapping.set(label, next);
+  });
+  if (mapping.size === 0) return { lines, mapping };
+
+  const out = lines.map((line) => {
+    const defLabel = definitionLabelOnLine(line);
+    let next = line;
+    if (defLabel && mapping.has(defLabel)) {
+      next = next.replace(
+        DEFINITION_HEAD_RE,
+        (m, l) => m.replace(`[^${l}]`, `[^${mapping.get(l) ?? l}]`)
+      );
+    }
+    const refs = referencesOnLine(next);
+    for (let i = refs.length - 1; i >= 0; i--) {
+      const r = refs[i];
+      const to = mapping.get(r.label);
+      if (to) next = next.slice(0, r.from) + `[^${to}]` + next.slice(r.to);
+    }
+    return next;
+  });
+  return { lines: out, mapping };
+}
+
+// Keep the trailing definitions block sorted in reading order, the way Word
+// keeps its footnote area. Bails out unless every definition sits in one
+// contiguous block at the end of the note (nothing else gets moved around).
+export function sortDefinitionBlock(lines: string[]): string[] {
+  const total = new Set<string>();
+  for (const line of lines) {
+    const d = definitionLabelOnLine(line);
+    if (d) total.add(d);
+  }
+  if (total.size < 2) return lines;
+
+  // Walk up from the end over definitions, their continuations, and blanks.
+  let start = lines.length;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const t = lines[i];
+    if (t.trim() === "" || definitionLabelOnLine(t) || /^[ \t]+\S/.test(t)) {
+      start = i;
+      continue;
+    }
+    break;
+  }
+  // Trim leading blanks of the region.
+  while (start < lines.length && lines[start].trim() === "") start++;
+  if (start >= lines.length || !definitionLabelOnLine(lines[start])) return lines;
+
+  const region = lines.slice(start);
+  const inBlock = new Set<string>();
+  for (const line of region) {
+    const d = definitionLabelOnLine(line);
+    if (d) inBlock.add(d);
+  }
+  if (inBlock.size !== total.size) return lines; // definitions elsewhere; leave
+
+  const defs = new Map<string, FootnoteDefinition>();
+  for (const label of inBlock) {
+    const def = findDefinition(lines, label);
+    if (!def || def.startLine < start) return lines;
+    defs.set(label, def);
+  }
+
+  const order = referenceOrder(lines.slice(0, start)).filter((l) => defs.has(l));
+  for (const label of inBlock) {
+    if (!order.includes(label)) order.push(label); // unreferenced defs keep the tail
+  }
+
+  const rendered = order.map((l) => renderDefinition(l, defs.get(l)?.content ?? ""));
+  const body = lines.slice(0, start);
+  while (body.length > 0 && body[body.length - 1].trim() === "") body.pop();
+  const next = body.length > 0 ? [...body, "", ...rendered] : rendered;
+  return next.join("\n") === lines.join("\n") ? lines : next;
+}
+
+export interface TidyResult {
+  text: string;
+  changed: boolean;
+  mapping: Map<string, string>;
+  removedRefs: string[];
+  removedDefs: string[];
+}
+
+// One pass of the whole Word-like discipline. `prev` is the snapshot from
+// before the user's edit; pass null to skip cleanup and only renumber/sort.
+export function tidyFootnotes(prev: FootnoteSnapshot | null, text: string): TidyResult {
+  let lines = text.split("\n");
+  let removedRefs: string[] = [];
+  let removedDefs: string[] = [];
+  if (prev) {
+    const plan = planCleanup(prev, snapshotFootnotes(lines));
+    if (
+      plan.removeRefLabels.size ||
+      plan.removeDefLabels.size ||
+      plan.renameRefs.size
+    ) {
+      removedRefs = [...plan.removeRefLabels];
+      removedDefs = [...plan.removeDefLabels];
+      lines = applyPlan(lines, plan);
+    }
+  }
+  const renumbered = renumberFootnotes(lines);
+  lines = sortDefinitionBlock(renumbered.lines);
+  const out = lines.join("\n");
+  return {
+    text: out,
+    changed: out !== text,
+    mapping: renumbered.mapping,
+    removedRefs,
+    removedDefs,
+  };
+}

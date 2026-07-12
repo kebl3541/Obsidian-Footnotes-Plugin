@@ -10,6 +10,7 @@ import {
 } from "obsidian";
 import {
   FootnoteDefinition,
+  FootnoteSnapshot,
   definitionLabelOnLine,
   findDefinition,
   nearestReference,
@@ -17,6 +18,8 @@ import {
   nthReferencedLabel,
   referenceAt,
   renderDefinition,
+  snapshotFootnotes,
+  tidyFootnotes,
 } from "./footnotes";
 
 interface FootnoteEditorSettings {
@@ -26,15 +29,29 @@ interface FootnoteEditorSettings {
   // When true, clicking a footnote marker opens the edit popup instead of just
   // previewing / jumping to the definition at the end of the note.
   clickToEdit: boolean;
+  // Word-like discipline: deleting a definition removes its markers (and vice
+  // versa), numeric footnotes stay numbered in reading order, and the
+  // definitions block stays sorted.
+  autoTidy: boolean;
 }
 
 const DEFAULT_SETTINGS: FootnoteEditorSettings = {
   autoNumber: true,
   clickToEdit: true,
+  autoTidy: true,
 };
+
+// How long the note must be quiet before tidying runs. Long enough not to
+// fight a half-typed edit, short enough to feel immediate.
+const TIDY_DEBOUNCE_MS = 700;
 
 export default class FootnoteEditorPlugin extends Plugin {
   settings: FootnoteEditorSettings = DEFAULT_SETTINGS;
+  // Pre-edit footnote state per file, so a deletion can be recognized for
+  // what it was once the editor goes quiet.
+  private snapshots = new Map<string, FootnoteSnapshot>();
+  private tidyTimer: number | null = null;
+  private applyingTidy = false;
 
   async onload() {
     await this.loadSettings();
@@ -73,7 +90,89 @@ export default class FootnoteEditorPlugin extends Plugin {
       )
     );
 
+    // Word-like tidying: watch for edits, and once the note goes quiet,
+    // reconcile markers, definitions, numbering, and definition order.
+    this.registerEvent(
+      this.app.workspace.on("file-open", () => this.captureBaseline())
+    );
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => this.captureBaseline())
+    );
+    this.registerEvent(
+      this.app.workspace.on("editor-change", (editor, info) => {
+        if (!this.settings.autoTidy || this.applyingTidy) return;
+        const path = info.file?.path;
+        if (!path) return;
+        if (!this.snapshots.has(path)) {
+          this.snapshots.set(path, snapshotFootnotes(editor.getValue().split("\n")));
+          return;
+        }
+        if (this.tidyTimer !== null) window.clearTimeout(this.tidyTimer);
+        this.tidyTimer = window.setTimeout(() => {
+          this.tidyTimer = null;
+          this.tidyNow(editor, path);
+        }, TIDY_DEBOUNCE_MS);
+      })
+    );
+    this.app.workspace.onLayoutReady(() => this.captureBaseline());
+
     this.addSettingTab(new FootnoteEditorSettingTab(this.app, this));
+  }
+
+  private captureBaseline() {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const path = view?.file?.path;
+    if (!view || !path) return;
+    this.snapshots.set(path, snapshotFootnotes(view.editor.getValue().split("\n")));
+  }
+
+  // Run one tidy pass now. Returns the renumbering map so callers can follow
+  // a label they just inserted.
+  private tidyNow(editor: Editor, path: string | null): Map<string, string> {
+    const prev = path ? this.snapshots.get(path) ?? null : null;
+    const result = tidyFootnotes(prev, editor.getValue());
+    if (result.changed) {
+      this.applyingTidy = true;
+      try {
+        this.replaceWholeDoc(editor, result.text);
+      } finally {
+        this.applyingTidy = false;
+      }
+      for (const label of result.removedRefs) {
+        new Notice(`Removed the marker of deleted footnote [^${label}].`);
+      }
+      for (const label of result.removedDefs) {
+        new Notice(`Removed footnote [^${label}]; its last marker was deleted.`);
+      }
+    }
+    if (path) {
+      this.snapshots.set(path, snapshotFootnotes(editor.getValue().split("\n")));
+    }
+    return result.mapping;
+  }
+
+  private activeFilePath(): string | null {
+    return this.app.workspace.getActiveViewOfType(MarkdownView)?.file?.path ?? null;
+  }
+
+  // Apply a whole-document rewrite as one minimal edit, so the cursor and
+  // scroll position survive and it lands as a single undo step.
+  private replaceWholeDoc(editor: Editor, next: string) {
+    const cur = editor.getValue();
+    if (next === cur) return;
+    let p = 0;
+    while (p < cur.length && p < next.length && cur[p] === next[p]) p++;
+    let curEnd = cur.length;
+    let nextEnd = next.length;
+    while (curEnd > p && nextEnd > p && cur[curEnd - 1] === next[nextEnd - 1]) {
+      curEnd--;
+      nextEnd--;
+    }
+    editor.replaceRange(
+      next.slice(p, nextEnd),
+      editor.offsetToPos(p),
+      editor.offsetToPos(curEnd)
+    );
   }
 
   async loadSettings() {
@@ -102,8 +201,16 @@ export default class FootnoteEditorPlugin extends Plugin {
       // 2. Create an empty definition at the end of the note.
       this.appendDefinition(editor, label, "");
 
-      // 3. Open the popup so the text is written without leaving this spot.
-      this.openEditor(editor, label);
+      // 3. Renumber, so the new footnote takes its reading-order position
+      //    (inserting mid-text shifts the later ones up, as in Word).
+      let finalLabel = label;
+      if (this.settings.autoTidy) {
+        const mapping = this.tidyNow(editor, this.activeFilePath());
+        finalLabel = mapping.get(label) ?? label;
+      }
+
+      // 4. Open the popup so the text is written without leaving this spot.
+      this.openEditor(editor, finalLabel);
     };
 
     if (this.settings.autoNumber) {
@@ -216,6 +323,7 @@ export default class FootnoteEditorPlugin extends Plugin {
     } else {
       this.appendDefinition(editor, label, content);
     }
+    if (this.settings.autoTidy) this.tidyNow(editor, this.activeFilePath());
   }
 
   private replaceLines(
@@ -298,6 +406,7 @@ export default class FootnoteEditorPlugin extends Plugin {
     );
     editor.transaction({ changes });
     new Notice(`Deleted footnote [^${label}].`);
+    if (this.settings.autoTidy) this.tidyNow(editor, this.activeFilePath());
   }
 }
 
@@ -441,6 +550,18 @@ class FootnoteEditorSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.autoNumber).onChange(async (v) => {
           this.plugin.settings.autoNumber = v;
+          await this.plugin.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName("Keep footnotes tidy automatically")
+      .setDesc(
+        "Behave like Word: deleting a definition also removes its in-text markers (and deleting the last marker removes the definition), numbered footnotes stay in reading order, and the definitions at the bottom stay sorted. Named footnotes like [^note] keep their labels."
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.autoTidy).onChange(async (v) => {
+          this.plugin.settings.autoTidy = v;
           await this.plugin.saveSettings();
         })
       );

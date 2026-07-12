@@ -37,6 +37,13 @@ continued development, please use the buttons below:</p>
   definition at the bottom) and run the command.
 - **Delete**: the popup's Delete button removes the definition and every
   reference to that footnote in one undoable step.
+- **Word-like tidying** (v1.2.0): footnotes behave the way they do in Word.
+  Delete a definition at the bottom and its in-text markers disappear; delete
+  the last marker and the definition goes; numbered footnotes always read
+  `1, 2, 3, …` in reading order (inserting mid-text shifts the later ones up);
+  the definitions block stays sorted to match; and renaming a definition's
+  label carries its markers along. Named footnotes like `[^kant]` keep their
+  labels. Runs after the note goes quiet for a moment, never mid-keystroke.
 
 Multi-line footnotes are supported (they're stored with the 4-space indentation
 Obsidian expects for continuation lines).
@@ -59,6 +66,8 @@ In the popup, **Cmd/Ctrl+Enter** saves and **Esc** cancels.
   `1, 2, 3, …`. Turn it off to be prompted for a custom label each time.
 - **Click footnote number to edit** (on by default): clicking a marker opens
   the edit popup instead of previewing or jumping to the definition.
+- **Keep footnotes tidy automatically** (on by default): the Word-like
+  behavior above. Turn it off to manage markers and numbering by hand.
 
 ## Install into your vault (manual)
 
