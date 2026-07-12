@@ -285,6 +285,26 @@ function sortDefinitionBlock(lines) {
   const next = body.length > 0 ? [...body, "", ...rendered] : rendered;
   return next.join("\n") === lines.join("\n") ? lines : next;
 }
+function insertFootnoteAt(text, offset) {
+  const tmp = nextNumericLabel(text.split("\n"));
+  let withRef = text.slice(0, offset) + `[^${tmp}]` + text.slice(offset);
+  const endsInDefBlock = (() => {
+    const lines = withRef.split("\n");
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const t = lines[i];
+      if (definitionLabelOnLine(t))
+        return true;
+      if (t.trim() === "" || /^[ \t]+\S/.test(t))
+        continue;
+      return false;
+    }
+    return false;
+  })();
+  const trimmed = withRef.replace(/\n+$/, "");
+  withRef = trimmed + (endsInDefBlock ? "\n" : "\n\n") + `[^${tmp}]: `;
+  const tidied = tidyFootnotes(null, withRef);
+  return { text: tidied.text, label: tidied.mapping.get(tmp) ?? tmp };
+}
 function tidyFootnotes(prev, text) {
   let lines = text.split("\n");
   let removedRefs = [];
@@ -313,6 +333,7 @@ export {
   applyPlan,
   definitionLabelOnLine,
   findDefinition,
+  insertFootnoteAt,
   nearestReference,
   nextNumericLabel,
   nthReferencedLabel,

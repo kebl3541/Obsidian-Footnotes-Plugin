@@ -367,6 +367,36 @@ export function sortDefinitionBlock(lines: string[]): string[] {
   return next.join("\n") === lines.join("\n") ? lines : next;
 }
 
+// Insert a new auto-numbered footnote as ONE text transformation: marker at
+// `offset`, empty definition in the block, everything renumbered and sorted.
+// The returned text never contains an intermediate label, so the editor can
+// go from old to final in a single atomic edit — no flash of a wrong number.
+export function insertFootnoteAt(
+  text: string,
+  offset: number
+): { text: string; label: string } {
+  const tmp = nextNumericLabel(text.split("\n"));
+  let withRef = text.slice(0, offset) + `[^${tmp}]` + text.slice(offset);
+
+  // Append the empty definition the same way appendDefinition used to,
+  // then let the tidy pass place and number everything properly.
+  const endsInDefBlock = (() => {
+    const lines = withRef.split("\n");
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const t = lines[i];
+      if (definitionLabelOnLine(t)) return true;
+      if (t.trim() === "" || /^[ \t]+\S/.test(t)) continue;
+      return false;
+    }
+    return false;
+  })();
+  const trimmed = withRef.replace(/\n+$/, "");
+  withRef = trimmed + (endsInDefBlock ? "\n" : "\n\n") + `[^${tmp}]: `;
+
+  const tidied = tidyFootnotes(null, withRef);
+  return { text: tidied.text, label: tidied.mapping.get(tmp) ?? tmp };
+}
+
 export interface TidyResult {
   text: string;
   changed: boolean;

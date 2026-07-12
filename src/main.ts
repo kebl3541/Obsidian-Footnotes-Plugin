@@ -13,6 +13,7 @@ import {
   FootnoteSnapshot,
   definitionLabelOnLine,
   findDefinition,
+  insertFootnoteAt,
   nearestReference,
   nextNumericLabel,
   nthReferencedLabel,
@@ -187,6 +188,29 @@ export default class FootnoteEditorPlugin extends Plugin {
   // ---- Commands -----------------------------------------------------------
 
   private insertFootnote(editor: Editor) {
+    // Auto-numbered inserts are ONE atomic edit: the document is transformed
+    // in memory — marker in place, definition added, everything renumbered in
+    // reading order — and written back in a single transaction. The footnote
+    // is born with its final number; no intermediate label ever appears.
+    if (this.settings.autoNumber && this.settings.autoTidy) {
+      const offset = editor.posToOffset(editor.getCursor());
+      const result = insertFootnoteAt(editor.getValue(), offset);
+      this.applyingTidy = true;
+      try {
+        this.replaceWholeDoc(editor, result.text);
+      } finally {
+        this.applyingTidy = false;
+      }
+      // Park the cursor right after the new marker (its label occurs first
+      // at the insertion point, since numbering is positional).
+      const m = new RegExp(`\\[\\^${result.label}\\](?!:)`).exec(result.text);
+      if (m) editor.setCursor(editor.offsetToPos(m.index + m[0].length));
+      const path = this.activeFilePath();
+      if (path) this.snapshots.set(path, snapshotFootnotes(result.text.split("\n")));
+      this.openEditor(editor, result.label);
+      return;
+    }
+
     const doInsert = (label: string) => {
       const lines = editor.getValue().split("\n");
       if (this.labelExists(lines, label)) {
@@ -201,16 +225,8 @@ export default class FootnoteEditorPlugin extends Plugin {
       // 2. Create an empty definition at the end of the note.
       this.appendDefinition(editor, label, "");
 
-      // 3. Renumber, so the new footnote takes its reading-order position
-      //    (inserting mid-text shifts the later ones up, as in Word).
-      let finalLabel = label;
-      if (this.settings.autoTidy) {
-        const mapping = this.tidyNow(editor, this.activeFilePath());
-        finalLabel = mapping.get(label) ?? label;
-      }
-
-      // 4. Open the popup so the text is written without leaving this spot.
-      this.openEditor(editor, finalLabel);
+      // 3. Open the popup so the text is written without leaving this spot.
+      this.openEditor(editor, label);
     };
 
     if (this.settings.autoNumber) {
@@ -242,6 +258,16 @@ export default class FootnoteEditorPlugin extends Plugin {
 
   // Open the edit popup for `label`, pre-filled with its current text.
   private openEditor(editor: Editor, label: string) {
+    // Settle any pending debounced tidy first, so the numbering can't shift
+    // underneath the open popup (the popup addresses its footnote by label).
+    if (this.tidyTimer !== null) {
+      window.clearTimeout(this.tidyTimer);
+      this.tidyTimer = null;
+      if (this.settings.autoTidy) {
+        const mapping = this.tidyNow(editor, this.activeFilePath());
+        label = mapping.get(label) ?? label;
+      }
+    }
     const lines = editor.getValue().split("\n");
     const def = findDefinition(lines, label);
 

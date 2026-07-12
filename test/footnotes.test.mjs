@@ -1,5 +1,6 @@
 // Tests for the Word-like tidying engine. Run via `npm test`.
 import {
+  insertFootnoteAt,
   snapshotFootnotes,
   tidyFootnotes,
   renumberFootnotes,
@@ -122,6 +123,35 @@ const snap = (text) => snapshotFootnotes(text.split("\n"));
   const text = "A[^1].\n\n[^2]: mid def\n\nB[^2].\n\n[^1]: end def";
   const sorted = sortDefinitionBlock(text.split("\n"));
   eq(sorted.join("\n"), text, "scattered definitions not reordered");
+}
+
+// 13. Atomic insert at the top of a 4-footnote note: born as [^1], one text.
+{
+  const text =
+    "Top line here.\n\nBody[^1] b[^2] c[^3] d[^4].\n\n[^1]: one\n[^2]: two\n[^3]: three\n[^4]: four";
+  const r = insertFootnoteAt(text, 8); // inside "Top line|"
+  eq(r.label, "1", "insert at top → label 1 immediately, never 5");
+  eq(r.text.startsWith("Top line[^1] here."), true, "marker carries its final number");
+  const defs = [...r.text.matchAll(/^\[\^(\d+)\]:/gm)].map((m) => m[1]);
+  eq(defs, ["1", "2", "3", "4", "5"], "definition block sorted 1..5");
+  const newDefLine = r.text.split("\n").find((l) => l.startsWith("[^1]:"));
+  eq(newDefLine, "[^1]: ", "the new definition is [^1] and empty");
+  eq(r.text.includes("[^5]: four"), true, "old fourth footnote becomes 5");
+}
+
+// 14. Atomic insert after all existing refs gets the last number.
+{
+  const text = "A[^1] B[^2].\n\n[^1]: a\n[^2]: b";
+  const r = insertFootnoteAt(text, text.indexOf(".") + 1);
+  eq(r.label, "3", "insert at end → label 3");
+}
+
+// 15. An orphan reference doesn't disturb insert numbering.
+{
+  const text = "X[^1] orphan[^9].\n\n[^1]: a";
+  const r = insertFootnoteAt(text, 1);
+  eq(r.label, "1", "orphan [^9] ignored; new footnote is 1");
+  eq(r.text.includes("orphan[^9]"), true, "orphan marker untouched");
 }
 
 if (failures > 0) {
