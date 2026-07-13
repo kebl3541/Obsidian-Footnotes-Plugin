@@ -240,6 +240,13 @@ export default class FootnoteEditorPlugin extends Plugin {
     }
   }
 
+  // Public interop surface: other plugins (the AI co-editor, notably) can
+  // normalize a whole document's footnotes — reading-order numbering and a
+  // sorted definitions block — before showing or applying text of their own.
+  tidyText(text: string): string {
+    return tidyFootnotes(null, text).text;
+  }
+
   async loadSettings() {
     const saved = (await this.loadData()) as Partial<FootnoteEditorSettings> | null;
     this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
