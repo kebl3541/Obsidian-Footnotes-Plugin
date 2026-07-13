@@ -130,6 +130,47 @@ export default class FootnoteEditorPlugin extends Plugin {
       )
     );
 
+    // The editor context menu carries Obsidian's own "Insert footnote" item,
+    // which does not go through the command we took over. Swap its action for
+    // the atomic insert so the right-click path also produces a footnote born
+    // with its final reading-order number.
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, editor) => {
+        if (!this.settings.autoNumber || !this.settings.autoTidy) return;
+        interface MenuItemLike {
+          titleEl?: HTMLElement;
+          dom?: HTMLElement;
+          callback?: () => unknown;
+          onClick?: (cb: () => unknown) => unknown;
+          submenu?: { items?: MenuItemLike[] } | null;
+        }
+        const run = () => {
+          void this.debugLog("insert via CONTEXT MENU (core item, intercepted)");
+          this.insertFootnote(editor);
+        };
+        // The core item lives in the "Insert" submenu ("Insert ▸ Footnote"),
+        // so walk the whole tree; titles vary between the two placements.
+        const walk = (items: MenuItemLike[] | undefined, depth: number) => {
+          if (!items || depth > 3) return;
+          for (const it of items) {
+            const title = (it.titleEl?.textContent ?? it.dom?.textContent ?? "")
+              .trim()
+              .toLowerCase();
+            if (title === "insert footnote" || title === "footnote") {
+              if (typeof it.onClick === "function") it.onClick(run);
+              else it.callback = run;
+            }
+            walk(it.submenu?.items, depth + 1);
+          }
+        };
+        const patch = () =>
+          walk((menu as unknown as { items?: MenuItemLike[] }).items, 0);
+        patch();
+        // Core may append its items around plugin handlers; catch both orders.
+        window.setTimeout(patch, 0);
+      })
+    );
+
     // Word-like tidying: watch for edits, and once the note goes quiet,
     // reconcile markers, definitions, numbering, and definition order.
     this.registerEvent(
