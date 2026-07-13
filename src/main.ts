@@ -46,6 +46,15 @@ const DEFAULT_SETTINGS: FootnoteEditorSettings = {
 // fight a half-typed edit, short enough to feel immediate.
 const TIDY_DEBOUNCE_MS = 700;
 
+// The slice of Obsidian's command registry we touch when taking over the
+// built-in insert-footnote command (not part of the public typings).
+interface CommandLike {
+  editorCallback?: (editor: Editor, view: MarkdownView) => unknown;
+  callback?: () => unknown;
+  checkCallback?: (checking: boolean) => boolean | void;
+  editorCheckCallback?: (checking: boolean, editor: Editor, view: MarkdownView) => boolean | void;
+}
+
 export default class FootnoteEditorPlugin extends Plugin {
   settings: FootnoteEditorSettings = DEFAULT_SETTINGS;
   // Pre-edit footnote state per file, so a deletion can be recognized for
@@ -53,9 +62,39 @@ export default class FootnoteEditorPlugin extends Plugin {
   private snapshots = new Map<string, FootnoteSnapshot>();
   private tidyTimer: number | null = null;
   private applyingTidy = false;
+  private coreInsert: { cmd: CommandLike; backup: CommandLike } | null = null;
 
   async onload() {
     await this.loadSettings();
+
+    // Take over Obsidian's built-in "Insert footnote" while this plugin is
+    // enabled: hotkeys, the command palette entry, and toolbar buttons that
+    // call it all go through the atomic insert (marker born with its final
+    // reading-order number). Restored untouched on unload.
+    const registry = (
+      this.app as unknown as {
+        commands?: { commands?: Record<string, CommandLike> };
+      }
+    ).commands?.commands;
+    const core = registry?.["editor:insert-footnote"];
+    if (core) {
+      this.coreInsert = {
+        cmd: core,
+        backup: {
+          editorCallback: core.editorCallback,
+          callback: core.callback,
+          checkCallback: core.checkCallback,
+          editorCheckCallback: core.editorCheckCallback,
+        },
+      };
+      core.callback = undefined;
+      core.checkCallback = undefined;
+      core.editorCheckCallback = undefined;
+      core.editorCallback = (editor: Editor) => {
+        void this.debugLog("insert via CORE editor:insert-footnote");
+        this.insertFootnote(editor);
+      };
+    }
 
     this.addCommand({
       id: "insert-footnote",
@@ -111,7 +150,12 @@ export default class FootnoteEditorPlugin extends Plugin {
         if (this.tidyTimer !== null) window.clearTimeout(this.tidyTimer);
         this.tidyTimer = window.setTimeout(() => {
           this.tidyTimer = null;
-          this.tidyNow(editor, path);
+          const mapping = this.tidyNow(editor, path);
+          if (mapping.size > 0) {
+            void this.debugLog(
+              `WATCHER renumbered {${[...mapping.entries()].map(([a, b]) => `${a}→${b}`).join(",")}} in ${path} — an insert bypassed the plugin`
+            );
+          }
         }, TIDY_DEBOUNCE_MS);
       })
     );
@@ -176,6 +220,26 @@ export default class FootnoteEditorPlugin extends Plugin {
     );
   }
 
+  onunload() {
+    if (this.coreInsert) {
+      Object.assign(this.coreInsert.cmd, this.coreInsert.backup);
+      this.coreInsert = null;
+    }
+  }
+
+  // Temporary diagnostics: one line per footnote-relevant event, appended to
+  // debug.log in the plugin folder. Removed once the "5 then 1" report is
+  // reproduced and understood.
+  async debugLog(line: string) {
+    try {
+      const p = `${this.app.vault.configDir}/plugins/${this.manifest.id}/debug.log`;
+      const stamp = new Date().toISOString().slice(11, 23);
+      await this.app.vault.adapter.append(p, `[${stamp}] ${line}\n`);
+    } catch {
+      // never let diagnostics break the feature
+    }
+  }
+
   async loadSettings() {
     const saved = (await this.loadData()) as Partial<FootnoteEditorSettings> | null;
     this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
@@ -195,6 +259,9 @@ export default class FootnoteEditorPlugin extends Plugin {
     if (this.settings.autoNumber && this.settings.autoTidy) {
       const offset = editor.posToOffset(editor.getCursor());
       const result = insertFootnoteAt(editor.getValue(), offset);
+      void this.debugLog(
+        `atomic insert at offset ${offset}: label=${result.label}, mapping={${[...(result.mapping?.entries?.() ?? [])].map(([a, b]) => `${a}→${b}`).join(",")}}`
+      );
       this.applyingTidy = true;
       try {
         this.replaceWholeDoc(editor, result.text);

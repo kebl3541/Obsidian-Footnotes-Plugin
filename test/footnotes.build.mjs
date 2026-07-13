@@ -303,7 +303,11 @@ function insertFootnoteAt(text, offset) {
   const trimmed = withRef.replace(/\n+$/, "");
   withRef = trimmed + (endsInDefBlock ? "\n" : "\n\n") + `[^${tmp}]: `;
   const tidied = tidyFootnotes(null, withRef);
-  return { text: tidied.text, label: tidied.mapping.get(tmp) ?? tmp };
+  return {
+    text: tidied.text,
+    label: tidied.mapping.get(tmp) ?? tmp,
+    mapping: tidied.mapping
+  };
 }
 function tidyFootnotes(prev, text) {
   let lines = text.split("\n");

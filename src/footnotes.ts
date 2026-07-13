@@ -374,7 +374,7 @@ export function sortDefinitionBlock(lines: string[]): string[] {
 export function insertFootnoteAt(
   text: string,
   offset: number
-): { text: string; label: string } {
+): { text: string; label: string; mapping: Map<string, string> } {
   const tmp = nextNumericLabel(text.split("\n"));
   let withRef = text.slice(0, offset) + `[^${tmp}]` + text.slice(offset);
 
@@ -394,7 +394,11 @@ export function insertFootnoteAt(
   withRef = trimmed + (endsInDefBlock ? "\n" : "\n\n") + `[^${tmp}]: `;
 
   const tidied = tidyFootnotes(null, withRef);
-  return { text: tidied.text, label: tidied.mapping.get(tmp) ?? tmp };
+  return {
+    text: tidied.text,
+    label: tidied.mapping.get(tmp) ?? tmp,
+    mapping: tidied.mapping,
+  };
 }
 
 export interface TidyResult {
