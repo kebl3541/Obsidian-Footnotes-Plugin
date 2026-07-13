@@ -305,7 +305,7 @@ export default class FootnoteEditorPlugin extends Plugin {
     // reading order — and written back in a single transaction. The footnote
     // is born with its final number; no intermediate label ever appears.
     if (this.settings.autoNumber && this.settings.autoTidy) {
-      const offset = editor.posToOffset(editor.getCursor());
+      const offset = editor.posToOffset(this.footnoteAnchor(editor));
       const result = insertFootnoteAt(editor.getValue(), offset);
       void this.debugLog(
         `atomic insert at offset ${offset}: label=${result.label}, mapping={${[...(result.mapping?.entries?.() ?? [])].map(([a, b]) => `${a}→${b}`).join(",")}}`
@@ -334,7 +334,7 @@ export default class FootnoteEditorPlugin extends Plugin {
       }
 
       // 1. Drop the reference where the cursor is.
-      const cursor = editor.getCursor();
+      const cursor = this.footnoteAnchor(editor);
       editor.replaceRange(`[^${label}]`, cursor);
 
       // 2. Create an empty definition at the end of the note.
@@ -369,6 +369,20 @@ export default class FootnoteEditorPlugin extends Plugin {
     }
 
     this.openEditor(editor, label);
+  }
+
+  // Where a new footnote marker should go. A cursor at the start of a line
+  // usually means the click resolved past the previous line's text (common
+  // just under a heading) — a marker never belongs at a line start, so snap
+  // to the end of the nearest previous non-empty line.
+  private footnoteAnchor(editor: Editor): { line: number; ch: number } {
+    const cur = editor.getCursor();
+    if (cur.ch !== 0 || cur.line === 0) return cur;
+    if (editor.getLine(cur.line).slice(0, 1).trim() !== "") return cur;
+    let l = cur.line - 1;
+    while (l >= 0 && editor.getLine(l).trim() === "") l--;
+    if (l < 0) return cur;
+    return { line: l, ch: editor.getLine(l).length };
   }
 
   // Open the edit popup for `label`, pre-filled with its current text.
