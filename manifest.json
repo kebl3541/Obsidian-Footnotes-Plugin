@@ -1,7 +1,7 @@
 {
   "id": "footnote-inline-editor",
   "name": "Footnote Inline Editor",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "minAppVersion": "1.4.0",
   "description": "Insert footnotes and edit their text in a popup, without scrolling to the bottom of the note.",
   "author": "kebl3541",

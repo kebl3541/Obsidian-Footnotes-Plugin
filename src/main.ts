@@ -63,6 +63,10 @@ export default class FootnoteEditorPlugin extends Plugin {
   private tidyTimer: number | null = null;
   private applyingTidy = false;
   private coreInsert: { cmd: CommandLike; backup: CommandLike } | null = null;
+  // Where the context menu was opened. Ctrl+click on macOS opens the menu
+  // WITHOUT moving the text cursor, so menu-driven inserts must anchor to
+  // the click, not to a possibly stale cursor.
+  private lastCtxClick: { x: number; y: number; ts: number } | null = null;
 
   async onload() {
     await this.loadSettings();
@@ -130,6 +134,16 @@ export default class FootnoteEditorPlugin extends Plugin {
       )
     );
 
+    const recordCtx = (evt: MouseEvent) => {
+      this.lastCtxClick = { x: evt.clientX, y: evt.clientY, ts: Date.now() };
+    };
+    this.registerDomEvent(activeDocument, "contextmenu", recordCtx, { capture: true });
+    this.registerEvent(
+      this.app.workspace.on("window-open", (win) =>
+        this.registerDomEvent(win.doc, "contextmenu", recordCtx, { capture: true })
+      )
+    );
+
     // The editor context menu carries Obsidian's own "Insert footnote" item,
     // which does not go through the command we took over. Swap its action for
     // the atomic insert so the right-click path also produces a footnote born
@@ -146,6 +160,20 @@ export default class FootnoteEditorPlugin extends Plugin {
         }
         const run = () => {
           void this.debugLog("insert via CONTEXT MENU (core item, intercepted)");
+          // Anchor to where the menu was opened; a macOS Ctrl+click opens
+          // the menu without ever moving the text cursor there.
+          const ctx = this.lastCtxClick;
+          if (ctx && Date.now() - ctx.ts < 10000) {
+            const cm = (
+              editor as unknown as {
+                cm?: { posAtCoords: (c: { x: number; y: number }) => number | null };
+              }
+            ).cm;
+            const pos = cm?.posAtCoords({ x: ctx.x, y: ctx.y });
+            if (pos !== null && pos !== undefined) {
+              editor.setCursor(editor.offsetToPos(pos));
+            }
+          }
           this.insertFootnote(editor);
         };
         // The core item lives in the "Insert" submenu ("Insert ▸ Footnote"),
