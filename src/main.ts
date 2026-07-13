@@ -373,12 +373,13 @@ export default class FootnoteEditorPlugin extends Plugin {
 
   // Where a new footnote marker should go. A cursor at the start of a line
   // usually means the click resolved past the previous line's text (common
-  // just under a heading) — a marker never belongs at a line start, so snap
-  // to the end of the nearest previous non-empty line.
+  // just under a heading, whose tall spacing swallows nearby clicks). A
+  // marker never belongs at the start of any line — footnotes attach to what
+  // precedes them — so snap to the end of the nearest previous non-empty
+  // line whenever the cursor sits at column 0.
   private footnoteAnchor(editor: Editor): { line: number; ch: number } {
     const cur = editor.getCursor();
     if (cur.ch !== 0 || cur.line === 0) return cur;
-    if (editor.getLine(cur.line).slice(0, 1).trim() !== "") return cur;
     let l = cur.line - 1;
     while (l >= 0 && editor.getLine(l).trim() === "") l--;
     if (l < 0) return cur;
